@@ -5,6 +5,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import uz.pdp.clickup.entity.User;
+import uz.pdp.clickup.entity.Workspace;
 import uz.pdp.clickup.payload.ApiResponse;
 import uz.pdp.clickup.payload.MemberDto;
 import uz.pdp.clickup.payload.WorkspaceDto;
@@ -12,6 +13,7 @@ import uz.pdp.clickup.security.CurrentUser;
 import uz.pdp.clickup.service.WorkspaceService;
 
 import javax.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -20,6 +22,14 @@ public class WorkspaceController {
 
     @Autowired
     WorkspaceService workspaceService;
+
+
+    @GetMapping
+    public HttpEntity<?> getAllWorkspaces(@CurrentUser User user){
+        List<Workspace> workspaces = workspaceService.getAllWorkspaces(user);
+        return ResponseEntity.ok(workspaces);
+    }
+
 
     @PostMapping
     public HttpEntity<?> addWorkspace(@Valid @RequestBody WorkspaceDto workspaceDto, @CurrentUser User user) {
@@ -35,8 +45,10 @@ public class WorkspaceController {
      * @return
      */
     @PutMapping("/{id}")
-    public HttpEntity<?> editWorkspace(@PathVariable Long id, @Valid @RequestBody WorkspaceDto workspaceDto) {
-        ApiResponse apiResponse = workspaceService.editWorkspace(id, workspaceDto);
+    public HttpEntity<?> editWorkspace(@PathVariable Long id,
+                                       @Valid @RequestBody WorkspaceDto workspaceDto,
+                                       @CurrentUser User user) {
+        ApiResponse apiResponse = workspaceService.editWorkspace(id, workspaceDto, user);
         return ResponseEntity.status(apiResponse.isSuccess() ? 200 : 409).body(apiResponse);
     }
 
@@ -48,8 +60,10 @@ public class WorkspaceController {
      * @return
      */
     @PutMapping("/changeOwner/{id}")
-    public HttpEntity<?> changeOwnerWorkspace(@PathVariable Long id, @RequestParam UUID ownerId) {
-        ApiResponse apiResponse = workspaceService.changeOwnerWorkspace(id, ownerId);
+    public HttpEntity<?> changeOwnerWorkspace(@PathVariable Long id,
+                                              @RequestParam UUID ownerId,
+                                              @CurrentUser User user) {
+        ApiResponse apiResponse = workspaceService.changeOwnerWorkspace(id, ownerId, user);
         return ResponseEntity.status(apiResponse.isSuccess() ? 200 : 409).body(apiResponse);
     }
 

@@ -1,7 +1,6 @@
 package uz.pdp.clickup.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.config.ConfigDataResourceNotFoundException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -64,7 +63,6 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
 
         //WORKSPACE ROLES
-
         WorkspaceRole ownerRole = workspaceRoleRepository.save(new WorkspaceRole(
                 savedWorkspace,
                 WorkspaceRoleName.ROLE_OWNER.name(),
@@ -138,13 +136,69 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     }
 
     @Override
-    public ApiResponse editWorkspace(Long id, WorkspaceDto workspaceDto) {
-        return null;
+    public ApiResponse editWorkspace(Long id, WorkspaceDto workspaceDto, User user) {
+        Optional<Workspace> optionalWorkspace = workspaceRepository.findById(id);
+        if (optionalWorkspace.isEmpty())
+            return new ApiResponse("Workspace not found!", false);
+
+        boolean exists = workspaceRepository.existsByNameAndOwnerIdAndIdNot(workspaceDto.getName(), user.getId(), id);
+        if (exists)
+            return new ApiResponse("This workspace exists!", false);
+
+        Workspace workspace = optionalWorkspace.get();
+        workspace.setName(workspaceDto.getName());
+        workspace.setColor(workspaceDto.getColor());
+        workspace.setAvatar(
+                workspaceDto.getAvatarId() == null ?
+                        null :
+                        attachmentRepository.findById(workspaceDto.getAvatarId()).orElseThrow(() -> new ResourceNotFoundException("Attachment not found!"))
+        );
+        workspaceRepository.save(workspace);
+
+        return new ApiResponse("Workspace edited!", true);
     }
 
+    /*
+    * Long id - workspace ning id si
+    * UUID ownerId - endi owner boladigan user id si
+    * User user - owner
+    * */
     @Override
-    public ApiResponse changeOwnerWorkspace(Long id, UUID ownerId) {
-        return null;
+    public ApiResponse changeOwnerWorkspace(Long id, UUID ownerId, User user) {
+
+        Optional<User> optionalUser = userRepository.findById(ownerId);
+        if (optionalUser.isEmpty())
+            return new ApiResponse("User not found!", false);
+
+        Optional<Workspace> optionalWorkspace = workspaceRepository.findById(id);
+        if (optionalWorkspace.isEmpty())
+            return new ApiResponse("Workspace not found!", false);
+
+        Workspace workspace = optionalWorkspace.get();
+        workspace.setOwner(optionalUser.get());
+        workspaceRepository.save(workspace);
+
+        /*
+        * Avvalgi owner
+        * */
+        Optional<WorkspaceUser> optionalWorkspaceUserOwner = workspaceUserRepository.findByWorkspaceIdAndUserId(id, user.getId());
+        if (optionalWorkspaceUserOwner.isEmpty())
+            return new ApiResponse("WorkspaceUser not found!", false);
+        WorkspaceUser workspaceUser = optionalWorkspaceUserOwner.get();
+        workspaceUser.setWorkspaceRole(workspaceRoleRepository.findByName("ROLE_ADMIN"));
+        workspaceUserRepository.save(workspaceUser);
+
+        /*
+        * Bo'lajak owner
+        * */
+        Optional<WorkspaceUser> optionalWorkspaceUser = workspaceUserRepository.findByWorkspaceIdAndUserId(id, ownerId);
+        if (optionalWorkspaceUser.isEmpty())
+            return new ApiResponse("WorkspaceUser not found!", false);
+        WorkspaceUser workspaceUser1 = optionalWorkspaceUser.get();
+        workspaceUser1.setWorkspaceRole(workspaceRoleRepository.findByName("ROLE_OWNER"));
+        workspaceUserRepository.save(workspaceUser1);
+
+        return new ApiResponse("Role given", true);
     }
 
     @Override
@@ -157,10 +211,6 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         }
     }
 
-
-    /*
-     *  - - - - - - -
-     * */
 
     @Override
     public ApiResponse addOrEditOrRemove(Long id, MemberDto memberDto) {
@@ -185,10 +235,9 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 mailMessage.setText("http://localhost:9090/api/workspace/join");
                 mailMessage.setSubject("Join");
                 javaMailSender.send(mailMessage);
-            }catch (Exception e){
+            } catch (Exception e) {
                 return new ApiResponse("Error sending email", false);
             }
-
 
 
         } else if (memberDto.getAddType().equals(AddType.EDIT)) {
@@ -211,7 +260,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     @Override
     public ApiResponse joinToWorkspace(Long id, User user) {
         Optional<WorkspaceUser> optionalWorkspaceUser = workspaceUserRepository.findByWorkspaceIdAndUserId(id, user.getId());
-        if (optionalWorkspaceUser.isPresent()){
+        if (optionalWorkspaceUser.isPresent()) {
             WorkspaceUser workspaceUser = optionalWorkspaceUser.get();
             workspaceUser.setDateJoined(new Timestamp(System.currentTimeMillis()));
             workspaceUserRepository.save(workspaceUser);
@@ -221,4 +270,8 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     }
 
 
+    @Override
+    public List<Workspace> getAllWorkspaces(User user) {
+        return workspaceRepository.findAllByOwnerId(user.getId());
+    }
 }
