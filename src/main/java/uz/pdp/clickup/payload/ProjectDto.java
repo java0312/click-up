@@ -2,9 +2,11 @@ package uz.pdp.clickup.payload;
 
 import lombok.Data;
 import uz.pdp.clickup.entity.Attachment;
+import uz.pdp.clickup.entity.SpaceUser;
 import uz.pdp.clickup.entity.enums.AccessTypeName;
 
 import javax.validation.constraints.NotBlank;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -23,4 +25,6 @@ public class ProjectDto {
 
     @NotBlank
     private String color;
+
+    private List<Long> spaceUsersId;
 }

@@ -2,18 +2,16 @@ package uz.pdp.clickup.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import uz.pdp.clickup.entity.Space;
-import uz.pdp.clickup.entity.User;
-import uz.pdp.clickup.entity.Workspace;
+import uz.pdp.clickup.entity.*;
 import uz.pdp.clickup.exceptions.ResourceNotFoundException;
 import uz.pdp.clickup.payload.ApiResponse;
 import uz.pdp.clickup.payload.SpaceDto;
-import uz.pdp.clickup.repository.AttachmentRepository;
-import uz.pdp.clickup.repository.SpaceRepository;
-import uz.pdp.clickup.repository.WorkspaceRepository;
+import uz.pdp.clickup.repository.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class SpaceServiceImpl implements SpaceService {
@@ -27,6 +25,27 @@ public class SpaceServiceImpl implements SpaceService {
     @Autowired
     AttachmentRepository attachmentRepository;
 
+    @Autowired
+    UserRepository userRepository;
+
+    @Autowired
+    SpaceUserRepository spaceUserRepository;
+
+    @Autowired
+    SpaceClickAppsRepository spaceClickAppsRepository;
+
+    @Autowired
+    ClickAppsRepository clickAppsRepository;
+
+    @Autowired
+    ViewRepository viewRepository;
+
+    @Autowired
+    SpaceViewRepository spaceViewRepository;
+
+    @Autowired
+    WorkspaceUserRepository workspaceUserRepository;
+
     @Override
     public ApiResponse addSpace(SpaceDto spaceDto, User owner) {
         boolean existsSpace = spaceRepository.existsByNameAndWorkspaceId(spaceDto.getName(), spaceDto.getWorkspaceId());
@@ -37,7 +56,8 @@ public class SpaceServiceImpl implements SpaceService {
         if (optionalWorkspace.isEmpty())
             return new ApiResponse("Workspace not found!", false);
 
-        spaceRepository.save(new Space(
+        //SPACE NI SAQLASH
+        Space savedSpace = spaceRepository.save(new Space(
                 spaceDto.getName(),
                 spaceDto.getColor(),
                 optionalWorkspace.get(),
@@ -51,6 +71,43 @@ public class SpaceServiceImpl implements SpaceService {
                 spaceDto.getAccessType(),
                 owner
         ));
+
+
+        //SPACE GA USERLARNI BIRLASHTIRISH
+        List<SpaceUser> spaceUserList = new ArrayList<>();
+        for (Long id : spaceDto.getWorkspaceUsersId()) {
+            Optional<WorkspaceUser> optionalWorkspaceUser = workspaceUserRepository.findById(id);
+            optionalWorkspaceUser.ifPresent(workspaceUser -> spaceUserList.add(new SpaceUser(
+                    savedSpace,
+                    workspaceUser.getUser()
+            )));
+        }
+        spaceUserRepository.saveAll(spaceUserList);
+
+
+        //SPACE GA CLICK APPS LARNI BIRLASHTIRISH
+        List<SpaceClickApps> spaceClickAppsList = new ArrayList<>();
+        for (Long id : spaceDto.getClickAppsId()) {
+            Optional<ClickApps> optionalClickApps = clickAppsRepository.findById(id);
+            optionalClickApps.ifPresent(clickApps -> spaceClickAppsList.add(new SpaceClickApps(
+                    savedSpace,
+                    clickApps
+            )));
+        }
+        spaceClickAppsRepository.saveAll(spaceClickAppsList);
+
+
+        //SPACE GA VIEW LARNI QO"SHISH
+        List<SpaceView> spaceViewList = new ArrayList<>();
+        for (Long viewId : spaceDto.getViewsId()) {
+            Optional<View> optionalView = viewRepository.findById(viewId);
+            optionalView.ifPresent(view -> spaceViewList.add(new SpaceView(
+                    savedSpace,
+                    view
+            )));
+        }
+        spaceViewRepository.saveAll(spaceViewList);
+
 
         return new ApiResponse("space created!", true);
     }

@@ -3,14 +3,15 @@ package uz.pdp.clickup.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import uz.pdp.clickup.entity.Project;
+import uz.pdp.clickup.entity.ProjectUser;
 import uz.pdp.clickup.entity.Space;
+import uz.pdp.clickup.entity.SpaceUser;
 import uz.pdp.clickup.exceptions.ResourceNotFoundException;
 import uz.pdp.clickup.payload.ApiResponse;
 import uz.pdp.clickup.payload.ProjectDto;
-import uz.pdp.clickup.repository.AttachmentRepository;
-import uz.pdp.clickup.repository.ProjectRepository;
-import uz.pdp.clickup.repository.SpaceRepository;
+import uz.pdp.clickup.repository.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +27,12 @@ public class ProjectServiceImpl implements ProjectService {
     @Autowired
     AttachmentRepository attachmentRepository;
 
+    @Autowired
+    SpaceUserRepository spaceUserRepository;
+
+    @Autowired
+    ProjectUserRepository projectUserRepository;
+
     @Override
     public ApiResponse addProject(ProjectDto projectDto) {
 
@@ -37,7 +44,7 @@ public class ProjectServiceImpl implements ProjectService {
         if (exists)
             return new ApiResponse("Project exists!", true);
 
-        projectRepository.save(new Project(
+        Project savedProject = projectRepository.save(new Project(
                 projectDto.getName(),
                 optionalSpace.get(),
                 projectDto.getAccessType(),
@@ -47,6 +54,20 @@ public class ProjectServiceImpl implements ProjectService {
                 false,
                 projectDto.getColor()
         ));
+
+        //Project users
+        List<ProjectUser> projectUserList = new ArrayList<>();
+        for (Long id : projectDto.getSpaceUsersId()) {
+            Optional<SpaceUser> optionalSpaceUser = spaceUserRepository.findById(id);
+            projectUserList.add(new ProjectUser(
+                   savedProject,
+                   optionalSpaceUser.get().getUser(),
+                    null
+            ));
+        }
+        projectUserRepository.saveAll(projectUserList);
+
+
 
         return new ApiResponse("Project created!", true);
     }
@@ -76,7 +97,6 @@ public class ProjectServiceImpl implements ProjectService {
                 );
         project.setArchived(false);
         project.setColor(projectDto.getColor());
-
         projectRepository.save(project);
 
         return new ApiResponse("Project edited!", true);
