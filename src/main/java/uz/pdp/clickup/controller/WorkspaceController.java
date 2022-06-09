@@ -9,6 +9,7 @@ import uz.pdp.clickup.entity.Workspace;
 import uz.pdp.clickup.payload.ApiResponse;
 import uz.pdp.clickup.payload.MemberDto;
 import uz.pdp.clickup.payload.WorkspaceDto;
+import uz.pdp.clickup.payload.WorkspaceRoleDto;
 import uz.pdp.clickup.security.CurrentUser;
 import uz.pdp.clickup.service.WorkspaceService;
 
@@ -24,7 +25,7 @@ public class WorkspaceController {
     WorkspaceService workspaceService;
 
 
-    @GetMapping
+    @GetMapping("/my")
     public HttpEntity<?> getAllWorkspaces(@CurrentUser User user){
         List<Workspace> workspaces = workspaceService.getAllWorkspaces(user);
         return ResponseEntity.ok(workspaces);
@@ -94,6 +95,32 @@ public class WorkspaceController {
         ApiResponse apiResponse = workspaceService.joinToWorkspace(id, user);
         return ResponseEntity.status(apiResponse.isSuccess() ? 200 : 409).body(apiResponse);
     }
+
+
+    /**
+     * LAST LESSON
+     *
+     */
+
+    //id = workspaceId
+    @GetMapping("/member/{id}")
+    public HttpEntity<?> getMembersAndGuests(@PathVariable Long id){
+        List<MemberDto> members = workspaceService.getMembersAndGuests(id);
+        return ResponseEntity.ok(members);
+    }
+
+    @GetMapping
+    public HttpEntity<?> getMyWorkspaces(@CurrentUser User user){
+        List<WorkspaceDto> workspaces = workspaceService.getMyWorkspaces(user);
+        return ResponseEntity.ok(workspaces);
+    }
+
+    @PutMapping("/addOrRemovePermission")
+    public HttpEntity<?> addOrRemovePermissionToRole(@RequestBody WorkspaceRoleDto workspaceRoleDto){
+        ApiResponse apiResponse = workspaceService.addOrRemovePermissionToRole(workspaceRoleDto);
+        return ResponseEntity.status(apiResponse.isSuccess() ? 200 : 409).body(apiResponse);
+    }
+
 
 
 }

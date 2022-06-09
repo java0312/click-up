@@ -14,4 +14,8 @@ public class WorkspaceDto {
     private String color;
 
     private UUID avatarId;
+
+    private Long id;
+
+    private String initialLetter;
 }

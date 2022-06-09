@@ -11,6 +11,7 @@ import uz.pdp.clickup.entity.enums.SystemRoleName;
 import uz.pdp.clickup.entity.template.AbstractUUIDEntity;
 
 import javax.persistence.*;
+import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -55,6 +56,10 @@ public class User extends AbstractUUIDEntity implements UserDetails {
     private SystemRoleName systemRoleName;
 
     private String emailCode;
+
+
+    private Timestamp lastActive;
+
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
