@@ -2,16 +2,10 @@ package uz.pdp.clickup.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import uz.pdp.clickup.entity.Tag;
-import uz.pdp.clickup.entity.Task;
-import uz.pdp.clickup.entity.TasksTags;
-import uz.pdp.clickup.entity.Workspace;
+import uz.pdp.clickup.entity.*;
 import uz.pdp.clickup.payload.ApiResponse;
 import uz.pdp.clickup.payload.TagDto;
-import uz.pdp.clickup.repository.TagRepository;
-import uz.pdp.clickup.repository.TaskRepository;
-import uz.pdp.clickup.repository.TasksTagsRepository;
-import uz.pdp.clickup.repository.WorkspaceRepository;
+import uz.pdp.clickup.repository.*;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +24,9 @@ public class TagServiceImpl implements TagService {
 
     @Autowired
     TaskRepository taskRepository;
+
+    @Autowired
+    TaskHistoryRepository taskHistoryRepository;
 
     @Override
     public ApiResponse addTag(TagDto tagDto) {
@@ -57,9 +54,20 @@ public class TagServiceImpl implements TagService {
             if (optionalTask.isEmpty())
                 return new ApiResponse("Task not found", false);
 
-            tasksTagsRepository.save(new TasksTags(
+            TasksTags savedTasksTags = tasksTagsRepository.save(new TasksTags(
                     optionalTask.get(),
                     savedTag
+            ));
+
+            /*
+            * TASK HISTORY
+            * */
+            taskHistoryRepository.save(new TaskHistory(
+                   savedTasksTags.getTask(),
+                    "Tag",
+                    "",
+                    savedTag.getName(),
+                    "tag created"
             ));
         }
         return new ApiResponse("Tag saved!", true);

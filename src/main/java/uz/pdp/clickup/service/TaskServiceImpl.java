@@ -34,6 +34,9 @@ public class TaskServiceImpl implements TaskService {
     @Autowired
     TasksUsersRepository tasksUsersRepository;
 
+    @Autowired
+    TaskHistoryRepository taskHistoryRepository;
+
     @Override
     public ApiResponse addTask(TaskDto taskDto) {
 
@@ -63,6 +66,17 @@ public class TaskServiceImpl implements TaskService {
                 null
         ));
 
+        /*
+         * Task history
+         * */
+        taskHistoryRepository.save(new TaskHistory(
+                savedTask,
+                "task",
+                "",
+                "create",
+                "Task created!"
+        ));
+
 
         List<TasksUsers> tasksUsersList = new ArrayList<>();
         for (UUID uuid : taskDto.getUsersIdList()) {
@@ -72,6 +86,17 @@ public class TaskServiceImpl implements TaskService {
             ));
         }
         tasksUsersRepository.saveAll(tasksUsersList);
+
+        /*
+         * Task history
+         * */
+        taskHistoryRepository.save(new TaskHistory(
+                savedTask,
+                "TaskUser",
+                "",
+                "create",
+                "TaskUsers added!"
+        ));
 
         return new ApiResponse("Task saved!", true);
     }
@@ -104,6 +129,17 @@ public class TaskServiceImpl implements TaskService {
         task.setDueTimeHas(taskDto.getDueTimeHas());
         task.setEstimateTime(taskDto.getEstimateTime());
 
+        /*
+         * Task history
+         * */
+        taskHistoryRepository.save(new TaskHistory(
+                task,
+                "task",
+                optionalTask.get().toString(),
+                task.toString(),
+                "Task edited!"
+        ));
+
         taskRepository.save(task);
 
         return new ApiResponse("Task edited!", true);
@@ -112,7 +148,24 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public ApiResponse deleteTask(Long id) {
         try {
+            Optional<Task> optionalTask = taskRepository.findById(id);
+            if (optionalTask.isEmpty())
+                return new ApiResponse("Task not found!", false);
+
             taskRepository.deleteById(id);
+
+            /*
+             * Task history
+             * */
+            taskHistoryRepository.save(new TaskHistory(
+                    optionalTask.get(),
+                    "task",
+                    "add",
+                    "delete",
+                    "Task deleted!"
+            ));
+
+
             return new ApiResponse("Task deleted!", true);
         }catch (Exception e){
             return new ApiResponse("Error in deleting!",false);

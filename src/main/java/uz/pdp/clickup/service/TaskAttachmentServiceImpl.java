@@ -6,11 +6,13 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 import uz.pdp.clickup.entity.Attachment;
 import uz.pdp.clickup.entity.TaskAttachment;
+import uz.pdp.clickup.entity.TaskHistory;
 import uz.pdp.clickup.exceptions.ResourceNotFoundException;
 import uz.pdp.clickup.payload.ApiResponse;
 import uz.pdp.clickup.payload.TaskAttachmentDto;
 import uz.pdp.clickup.repository.AttachmentRepository;
 import uz.pdp.clickup.repository.TaskAttachmentRepository;
+import uz.pdp.clickup.repository.TaskHistoryRepository;
 import uz.pdp.clickup.repository.TaskRepository;
 
 import java.io.IOException;
@@ -33,6 +35,9 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
 
     @Autowired
     AttachmentRepository attachmentRepository;
+
+    @Autowired
+    TaskHistoryRepository taskHistoryRepository;
 
     @Override
     public ApiResponse addTaskAttachment(MultipartHttpServletRequest request, TaskAttachmentDto taskAttachmentDto) {
@@ -65,10 +70,22 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
             /**
              *  * * * * * * * * * * * * * *
              */
-            taskAttachmentRepository.save(new TaskAttachment(
+            TaskAttachment savedTaskAttachment = taskAttachmentRepository.save(new TaskAttachment(
                     taskRepository.findById(taskAttachmentDto.getTaskId()).orElseThrow(() -> new ResourceNotFoundException("Task not found!")),
                     savedAttachment,
                     taskAttachmentDto.isPinCoverImage()
+            ));
+
+
+            /*
+             * Task history
+             * */
+            taskHistoryRepository.save(new TaskHistory(
+                    savedTaskAttachment.getTask(),
+                    "task attachment",
+                    "",
+                    savedAttachment.getName(),
+                    "TaskAttachment created!"
             ));
 
             return new ApiResponse("TaskAttachment saved!", true);
@@ -80,7 +97,23 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
     @Override
     public ApiResponse deleteTaskAttachment(Long id) {
         try {
+            Optional<TaskAttachment> optionalTaskAttachment = taskAttachmentRepository.findById(id);
+            if (optionalTaskAttachment.isEmpty())
+                return new ApiResponse("Task Attachment not found!", false);
+
             taskAttachmentRepository.deleteById(id);
+
+            /*
+             * Task history
+             * */
+            taskHistoryRepository.save(new TaskHistory(
+            optionalTaskAttachment.get().getTask(),
+                    "task attachment",
+                    "add",
+                    "remove",
+                    "TaskAttachment deleted!"
+            ));
+
             return new ApiResponse("TaskAttachment deleted", true);
         } catch (Exception e) {
             return new ApiResponse("Error in deleting!", false);
@@ -92,6 +125,17 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
         Optional<TaskAttachment> optionalTaskAttachment = taskAttachmentRepository.findById(id);
         if (optionalTaskAttachment.isEmpty())
             return new ApiResponse("TaskAttachment not found!", false);
+
+        /*
+         * Task history
+         * */
+        taskHistoryRepository.save(new TaskHistory(
+                optionalTaskAttachment.get().getTask(),
+                "task attachment pin cover image",
+                "false",
+                "true",
+                "Pin cover image!"
+        ));
 
         List<TaskAttachment> taskAttachmentList = taskAttachmentRepository.findAllByTaskId(optionalTaskAttachment.get().getTask().getId());
         for (TaskAttachment taskAttachment : taskAttachmentList) {
