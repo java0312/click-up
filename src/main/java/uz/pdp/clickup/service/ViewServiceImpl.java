@@ -2,13 +2,16 @@ package uz.pdp.clickup.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import uz.pdp.clickup.entity.SpaceView;
 import uz.pdp.clickup.entity.View;
 import uz.pdp.clickup.exceptions.ResourceNotFoundException;
 import uz.pdp.clickup.payload.ApiResponse;
 import uz.pdp.clickup.payload.ViewDto;
+import uz.pdp.clickup.repository.SpaceViewRepository;
 import uz.pdp.clickup.repository.ViewRepository;
 import uz.pdp.clickup.repository.IconRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +23,9 @@ public class ViewServiceImpl implements ViewService {
 
     @Autowired
     IconRepository iconRepository;
+
+    @Autowired
+    SpaceViewRepository spaceViewRepository;
 
     @Override
     public ApiResponse addView(ViewDto ViewDto) {
@@ -78,5 +84,17 @@ public class ViewServiceImpl implements ViewService {
     @Override
     public View getView(Long id) {
         return viewRepository.findById(id).orElse(null);
+    }
+
+
+
+    @Override
+    public List<View> getAllViewsBySpaceId(Long spaceId) {
+        List<SpaceView> allBySpaceId = spaceViewRepository.findAllBySpaceId(spaceId);
+        List<View> views = new ArrayList<>();
+        for (SpaceView spaceView : allBySpaceId) {
+            views.add(spaceView.getView());
+        }
+        return views;
     }
 }
